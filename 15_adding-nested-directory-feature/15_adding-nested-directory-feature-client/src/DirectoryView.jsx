@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import "./App.css";
+import { useParams } from "react-router-dom";
 
-function App() {
-  const URL = "http://192.168.195.11:4000/";
+function DirectoryView() {
+  const BASE_URL = "http://192.168.0.105:4000";
   const [directoryItems, setDirectoryItems] = useState([]);
   const [progress, setProgress] = useState(0);
   const [newFilename, setNewFilename] = useState("");
+  const { "*": dirPath } = useParams();
+  console.log(dirPath);
 
   async function getDirectoryItems() {
-    const response = await fetch(URL);
+    const response = await fetch(`${BASE_URL}/directory/${dirPath}`);
     const data = await response.json();
     setDirectoryItems(data);
   }
@@ -19,7 +21,7 @@ function App() {
   async function uploadFile(e) {
     const file = e.target.files[0];
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${URL}${file.name}`, true);
+    xhr.open("POST", `${BASE_URL}/files/${file.name}`, true);
     xhr.addEventListener("load", () => {
       console.log(xhr.response);
       getDirectoryItems();
@@ -32,7 +34,7 @@ function App() {
   }
 
   async function handleDelete(filename) {
-    const response = await fetch(`${URL}${filename}`, {
+    const response = await fetch(`${BASE_URL}/files/${filename}`, {
       method: "DELETE",
     });
     const data = await response.text();
@@ -47,7 +49,7 @@ function App() {
 
   async function saveFilename(oldFilename) {
     setNewFilename(oldFilename);
-    const response = await fetch(`${URL}${oldFilename}`, {
+    const response = await fetch(`${BASE_URL}/files/${oldFilename}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -70,15 +72,20 @@ function App() {
         value={newFilename}
       />
       <p>Progress: {progress}%</p>
-      {directoryItems.map((item, i) => (
+      {directoryItems.map(({ name, isDirectory }, i) => (
         <div key={i}>
-          {item} <a href={`${URL}${item}?action=open`}>Open</a>{" "}
-          <a href={`${URL}${item}?action=download`}>Download</a>
-          <button onClick={() => renameFile(item)}>Rename</button>
-          <button onClick={() => saveFilename(item)}>Save</button>
+          {name} {isDirectory && <a href={`./${name}`}>Open</a>}
+          {!isDirectory && (
+            <a href={`${BASE_URL}/files/${name}?action=open`}>Open</a>
+          )}{" "}
+          {!isDirectory && (
+            <a href={`${BASE_URL}/files/${name}?action=download`}>Download</a>
+          )}
+          <button onClick={() => renameFile(name)}>Rename</button>
+          <button onClick={() => saveFilename(name)}>Save</button>
           <button
             onClick={() => {
-              handleDelete(item);
+              handleDelete(name);
             }}
           >
             Delete
@@ -90,4 +97,4 @@ function App() {
   );
 }
 
-export default App;
+export default DirectoryView;
